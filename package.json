@@ -1,0 +1,28 @@
+{
+  "name": "marcom",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/lilymaglab1/marcom#readme",
+  "bugs": {
+    "url": "https://github.com/lilymaglab1/marcom/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lilymaglab1/marcom.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@_davideast/stitch-mcp": "^0.3.2",
+    "@iflow-mcp/notebooklm-mcp": "^1.2.0",
+    "@modelcontextprotocol/server-filesystem": "^2026.1.14",
+    "@modelcontextprotocol/server-gdrive": "^2025.1.14",
+    "@modelcontextprotocol/server-postgres": "^0.6.2",
+    "@supabase/mcp-server-supabase": "^0.6.3"
+  }
+}

@@ -1,0 +1,54 @@
+{
+    "mcpServers": {
+        "notebooklm": {
+            "command": "node",
+            "args": [
+                "c:/marcom/notebooklm-mcp/dist/index.js"
+            ]
+        },
+        "stitch": {
+            "command": "node",
+            "args": [
+                "c:/marcom/.agent/stitch_wrapper.mjs",
+                "proxy"
+            ],
+            "env": {
+                "STITCH_API_KEY": "AQ.Ab8RN6JDzVIqAiqI0tgeK3P1EPsuQTtai9gSMC1x4VCDrzr1wA"
+            }
+        },
+        "brave-search": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-brave-search"
+            ],
+            "env": {
+                "BRAVE_API_KEY": "BSAIgb7iIWPjS9DepPtYn7G6yY-V9HB"
+            }
+        },
+        "google-drive": {
+            "command": "node",
+            "args": [
+                "c:/marcom/node_modules/@modelcontextprotocol/server-gdrive/dist/index.js"
+            ]
+        },
+        "postgres": {
+            "command": "node",
+            "args": [
+                "c:/marcom/node_modules/@modelcontextprotocol/server-postgres/dist/index.js",
+                "postgresql://localhost/lilymag_db"
+            ]
+        },
+        "supabase": {
+            "command": "node",
+            "args": [
+                "c:/marcom/node_modules/@supabase/mcp-server-supabase/dist/transports/stdio.js",
+                "--project-ref",
+                "zagreshhrbxlhumbqkcf"
+            ],
+            "env": {
+                "SUPABASE_ACCESS_TOKEN": "sbp_3046079a3071f1d93282a089535e1d9330dcd60a"
+            }
+        }
+    }
+}
