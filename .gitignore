@@ -1,0 +1,7 @@
+node_modules/
+.env*
+*.json
+*.keys.json
+.gdrive-server-credentials.json
+test_path.mjs
+notebooklm-mcp/
