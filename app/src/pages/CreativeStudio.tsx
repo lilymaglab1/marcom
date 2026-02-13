@@ -20,6 +20,9 @@ import { LILYMAG_BRAIN_CONTEXT } from '../data/aiBrainContext';
 // Found API Key from C:\startup_marketing com
 const POLLINATIONS_API_KEY = 'sk_rF0EPX75yRV9mkuIxvBnuZ80LmdCOdXE';
 
+// Direct Gemini Logic
+import { generateContentDirect, GeminiContent } from '../services/geminiDirect';
+
 const agents = [
     { id: 'blog', name: '인문학 에디터', icon: FileText, desc: '미술, 음악, 추억을 연결하는 스토리텔링 (LILYMAG)', color: 'blue' },
     { id: 'social', name: '소셜 미디어 PD', icon: Instagram, desc: '감성적인 릴리맥 인스타그램 캡션', color: 'purple' },
@@ -33,6 +36,9 @@ const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNa
     const [result, setResult] = useState<any | null>(null);
     const [activeTab, setActiveTab] = useState<'blog' | 'instagram' | 'shorts'>('blog');
     const [isPublishing, setIsPublishing] = useState(false);
+
+    // Direct Generation Toggle
+    const [isDirectMode, setIsDirectMode] = useState(true); // Default to App Direct (Faster/Safer)
 
     // Editor States
     const [isEditing, setIsEditing] = useState(false);
@@ -52,29 +58,31 @@ const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNa
         // Initialize custom prompts with recommended prompts when result loads
         if (result?.images) {
             const initialPrompts: Record<number, string> = {};
-            result.images.forEach((img: any) => {
+            // Handle both structure formats (direct vs n8n)
+            const imgList = Array.isArray(result.images) ? result.images : [];
+            imgList.forEach((img: any) => {
                 initialPrompts[img.id] = img.recommended_prompt;
             });
             setCustomPrompts(initialPrompts);
         }
     }, [result]);
 
-    // Helper: Generate High-Quality Flux Image URL with API Key
+    // Helper: Generate High-Quality Flux Image URL with API Key (PREMIUM FAST)
     const getPollinationsUrl = (prompt: string, seed: number) => {
-        // Auto-enhance prompt for quality if not present
         const enhancedPrompt = prompt.includes('high quality') ? prompt : `${prompt}, high quality, cinematic lighting, 8k resolution, photorealistic, elegant style`;
         const encodedPrompt = encodeURIComponent(enhancedPrompt);
+        // 💎 Use User's Premium Key for Speed & Quality
         return `https://gen.pollinations.ai/image/${encodedPrompt}?width=1024&height=1280&model=flux&nologo=true&seed=${seed}&key=${POLLINATIONS_API_KEY}`;
     };
 
     const getFallbackUrl = (prompt: string, seed: number) => {
-        const enhancedPrompt = prompt.includes('high quality') ? prompt : `${prompt}, high quality, cinematic lighting, 8k resolution`;
-        return `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=1280&model=flux&nologo=true&seed=${seed}`;
+        // Fallback to Public/Free Endpoint if Premium fails
+        console.log("⚠️ Premium Image Failed. Switching to Public Endpoint...");
+        return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1280&model=flux&nologo=true&seed=${seed}`;
     };
 
     const handleImageError = (imgId: number, prompt: string, seed: number) => {
         if (!imageLoadErrors[imgId]) {
-            console.log(`Retrying image ${imgId} with fallback URL...`);
             setImageLoadErrors(prev => ({ ...prev, [imgId]: true }));
             setResult((prev: any) => ({
                 ...prev,
@@ -91,29 +99,40 @@ const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNa
         setResult(null);
         setIsEditing(false);
         setImageLoadErrors({});
-        try {
-            const response = await fetch('/api/n8n/webhook/lilymag-studio-v4', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ keyword: topic, context: LILYMAG_BRAIN_CONTEXT }),
-            });
 
-            if (!response.ok) {
-                if (response.status === 500) throw new Error('AI 서비스 과부하 (잠시 후 다시 시도)');
-                throw new Error('네트워크 응답 오류');
+        try {
+            let finalData;
+
+            if (isDirectMode) {
+                // 🚀 APP DIRECT MODE (No Server Dependency)
+                console.log("⚡ Generating via App Engine...");
+                const directResult: GeminiContent = await generateContentDirect(topic); // Assuming import
+                finalData = directResult;
+            } else {
+                // ☁️ RAILWAY SERVER MODE
+                console.log("🌧️ Generating via Railway Server...");
+                const response = await fetch('/api/n8n/webhook/lilymag-studio-v4', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ keyword: topic, context: LILYMAG_BRAIN_CONTEXT }),
+                });
+
+                if (!response.ok) {
+                    if (response.status === 500) throw new Error('AI 서비스 과부하 (잠시 후 다시 시도)');
+                    throw new Error('네트워크 응답 오류');
+                }
+                finalData = await response.json();
             }
 
-            const data = await response.json();
-
-            // Apply Flux Model & API Key Logic
-            if (data.images) {
-                data.images = data.images.map((img: any) => ({
+            // Apply Flux Model & API Key Logic (Unified)
+            if (finalData.images) {
+                finalData.images = finalData.images.map((img: any) => ({
                     ...img,
                     url: getPollinationsUrl(img.recommended_prompt, Math.floor(Math.random() * 1000))
                 }));
             }
 
-            setResult(data);
+            setResult(finalData);
         } catch (e: any) {
             console.error(e);
             alert(`생성 중 오류가 발생했습니다: ${e.message}`);
@@ -165,12 +184,26 @@ const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNa
         <Layout onNavigate={onNavigate} currentPage="studio">
             <div className="p-10 flex flex-col gap-10 max-w-[1700px] mx-auto min-h-screen">
                 <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-momentum-blue" />
-                        <span className="text-[10px] font-black text-momentum-blue uppercase tracking-[0.3em]">LILYMAG CREATIVE STUDIO</span>
+                    <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-3">
+                            <div className="flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-momentum-blue" />
+                                <span className="text-[10px] font-black text-momentum-blue uppercase tracking-[0.3em]">LILYMAG CREATIVE STUDIO</span>
+                            </div>
+                            <h2 className="text-5xl font-bold tracking-tight font-outfit">AI 스토리텔링 & 아트웍</h2>
+                            <p className="text-white/40 text-lg mt-1 font-medium italic">"LILYMAG의 철학을 담은 글과 AI(Flux)가 그린 그림의 만남"</p>
+                        </div>
+                        {/* ⚡ ENGINE TOGGLE SWITCH */}
+                        <div className="flex items-center gap-4 bg-white/5 p-2 rounded-xl border border-white/10">
+                            <span className="text-[10px] uppercase font-bold text-white/40 pl-2">Engine Mode</span>
+                            <button
+                                onClick={() => setIsDirectMode(!isDirectMode)}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${isDirectMode ? 'bg-momentum-blue text-white shadow-lg shadow-blue-500/20' : 'bg-transparent text-white/40 hover:text-white'}`}
+                            >
+                                {isDirectMode ? <><Sparkles className="w-3 h-3" /> APP DIRECT (FAST)</> : <><RefreshCw className="w-3 h-3" /> RAILWAY SERVER</>}
+                            </button>
+                        </div>
                     </div>
-                    <h2 className="text-5xl font-bold tracking-tight font-outfit">AI 스토리텔링 & 아트웍</h2>
-                    <p className="text-white/40 text-lg mt-1 font-medium italic">"LILYMAG의 철학을 담은 글과 AI(Flux)가 그린 그림의 만남"</p>
                 </div>
 
                 <div className="grid grid-cols-12 gap-12">
@@ -192,7 +225,7 @@ const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNa
                                 <textarea value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="예: 해바라기, 심리학, 컬러학, 여름 추억..." className="w-full bg-black/40 border border-white/10 rounded-2xl p-6 text-sm h-40 focus:border-momentum-blue outline-none transition-all placeholder:text-white/10 resize-none leading-relaxed" />
                             </div>
                             <button onClick={handleGenerate} disabled={isGenerating || !topic} className="w-full py-6 bg-gradient-to-r from-momentum-blue to-blue-600 rounded-2xl font-black uppercase tracking-[0.3em] text-sm shadow-2xl flex items-center justify-center gap-4 transition-all disabled:opacity-30">
-                                {isGenerating ? <><RefreshCw className="w-5 h-5 animate-spin" />LILYMAG 스토리 생성 중...</> : <><Wand2 className="w-5 h-5" />작품 생성 시작</>}
+                                {isGenerating ? <><RefreshCw className="w-5 h-5 animate-spin" />LILYMAG 스토리 생성 중...</> : <><Wand2 className="w-5 h-5" />작품 생성 시작 ({isDirectMode ? 'App' : 'Server'})</>}
                             </button>
                         </div>
                     </div>
