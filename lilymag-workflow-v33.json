@@ -1,0 +1,107 @@
+{
+    "name": "Lilymag Universal Storyteller [V33]",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "lilymag-studio-v4",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "id": "e45f9c5d-3178-4389-9b98-5c4902094c48",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                100,
+                300
+            ],
+            "webhookId": "7f7f7f7f-7f7f-7f7f-7f7f-7f7f7f7f7f7f"
+        },
+        {
+            "parameters": {
+                "jsCode": "const input = $json.body.keyword || \"꽃\";\nreturn [{\n  json: {\n    contents: [{\n      parts: [{\n        text: `당신은 릴리맥(Lilymag)의 유니버설 크리에이티브 디렉터입니다. 릴리맥은 LILYMAG 으로 표기합니다 (Lillymac, Lillimac, LILIMAC 절대 아님).\\n\\n키워드 [${input}]를 활용해 다학제적 매거진 기사를 작성하세요.\\n\\n[필수 포함 - 3개 이상 융합]\\n- 미술/영화/음악: 명화, 영화 장면, 클래식/가요 등 문화예술 연결\\n- 심리학/인간관계: 꽃이 주는 심리적 치유, 관계의 따뜻함\\n- 컬러학/인테리어: 색채 심리, 공간 연출법\\n- 환경/ESG: 지속가능성, 자연 보호\\n- 마케팅/트렌드: 소비 트렌드, 라이프스타일 변화\\n- 추억/에피소드: 고객 이야기, 감성적 체험담\\n\\n[규칙]\\n- 분량: 2,500~3,500자\\n- 이미지 지문: 본문 중간에 [이미지 삽입 1] ~ [이미지 삽입 5] 배치\\n- 어투: 전문 에세이스트의 따뜻한 산문체\\n- 브랜드: 릴리맥(Lilymag) 정확히 표기\\n\\n[출력 - JSON만 출력. 앞뒤 설명 절대 금지]\\n{\\n  \"blog\": { \"title\": \"\", \"content\": \"\", \"tags\": [] },\\n  \"instagram\": { \"caption\": \"\", \"hashtags\": [] },\\n  \"shorts\": { \"script\": \"\", \"overlay_text\": \"\" },\\n  \"images\": [\\n    { \"id\": 1, \"recommended_prompt\": \"Description for Flux Image 1\" },\\n    { \"id\": 2, \"recommended_prompt\": \"Description for Flux Image 2\" },\\n    { \"id\": 3, \"recommended_prompt\": \"Description for Flux Image 3\" },\\n    { \"id\": 4, \"recommended_prompt\": \"Description for Flux Image 4\" }\\n  ]\\n}`\n      }]\n    }]\n  }\n}];"
+            },
+            "id": "c6238bfc-8c5d-4076-a077-83713052c933",
+            "name": "Universal Persona (V33)",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                320,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=AIzaSyBkMoSRT3ntho9BEiE5iX7v4h3ZSN63Lcc",
+                "sendBody": true,
+                "contentType": "json",
+                "specifyBody": "json",
+                "jsonBody": "={{ $json }}",
+                "options": {
+                    "timeout": 120000
+                }
+            },
+            "id": "18f2780c-7b24-4f93-9c86-130198031548",
+            "name": "Gemini-Flash 2.0 (LILYMAG)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.1,
+            "position": [
+                540,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "try {\n  const res = $input.all()[0].json;\n  const raw = res.candidates[0].content.parts[0].text;\n  const firstBrace = raw.indexOf('{');\n  const lastBrace = raw.lastIndexOf('}');\n  if (firstBrace === -1 || lastBrace === -1) throw new Error('No JSON found in response');\n  const clean = raw.substring(firstBrace, lastBrace + 1);\n  const parsed = JSON.parse(clean);\n  \n  // Enhance Image Prompts for Flux\n  const images = (parsed.images || []).map((s) => ({\n    ...s,\n    recommended_prompt: s.recommended_prompt + \", high quality, photorealistic, cinematic lighting, 8k resolution\"\n  }));\n\n  return [{ json: { ...parsed, images, status: 'success_v33' } }];\n} catch (e) {\n  return [{ json: { blog: { title: 'AI 응답 오류 (재시도 요망)', content: '생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.\\n오류 상세: ' + e.message, tags: [] }, instagram: { caption: '', hashtags: [] }, shorts: { script: '', overlay_text: '' }, images: [], status: 'error' } }];\n}"
+            },
+            "id": "a92c3062-8e12-4d56-a0e2-763428981234",
+            "name": "Universal Processor (V33)",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                760,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Universal Persona (V33)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Universal Persona (V33)": {
+            "main": [
+                [
+                    {
+                        "node": "Gemini-Flash 2.0 (LILYMAG)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gemini-Flash 2.0 (LILYMAG)": {
+            "main": [
+                [
+                    {
+                        "node": "Universal Processor (V33)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    }
+}
