@@ -36,26 +36,42 @@ const CreativeStudio: React.FC<CreativeStudioProps> = ({ onNavigate }) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [result, setResult] = useState<string | null>(null);
 
-    const handleGenerate = () => {
+    const handleGenerate = async () => {
         if (!topic) return;
         setIsGenerating(true);
+        setResult(null);
 
-        // Use real brain context for more authentic generation
-        setTimeout(() => {
-            const agentName = agents.find(a => a.id === selectedAgent)?.name;
-            const usp = LILYMAG_BRAIN_CONTEXT.usps[0];
+        try {
+            // Updated to use Local Proxy to avoid CORS issues
+            const response = await fetch('/api/n8n/webhook/lilymag-creative-studio', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    topic,
+                    agent: selectedAgent,
+                    context: LILYMAG_BRAIN_CONTEXT
+                }),
+            });
 
-            const content = `[Momentum Creative Output: ${agentName}]\n\n` +
-                `● 메인 슬로건: "단순한 꽃이 아니라, '${LILYMAG_BRAIN_CONTEXT.philosophy}'의 가치를 전합니다."\n\n` +
-                `1. Hook (초기 소구점): \n "${topic}을 고민 중이신가요? 릴리맥은 지난 ${LILYMAG_BRAIN_CONTEXT.history.split(' ')[2]} 설립 이래 공간과 사람을 잇는 가장 우아한 언어를 연구해왔습니다."\n\n` +
-                `2. Unique Value (USP 기반): \n "${usp.title}: ${usp.description}"\n\n` +
-                `3. Brand Spirit (철학): \n "릴리맥의 철학은 명확합니다. 꽃을 파는 것이 아니라 공간의 품격을 완성하는 것입니다. ${topic} 역시 단순한 상품이 아닌 당신의 공간을 위한 '작품'이 될 것입니다."\n\n` +
-                `4. Recommendation (AI 전략 제언): \n "이번 ${topic} 마케팅에서는 'Space-First' 태그를 강조하며, 고관여 고객층을 겨냥한 프리미엄 수입 품종의 비주얼을 전면에 배치하는 것이 SEO와 전환율 측면에서 유리합니다."\n\n` +
-                `[최적화 키워드: #공간스타일링 #럭셔리플라워 #릴리맥 #30년전통 #전문가큐레이션]`;
+            if (!response.ok) {
+                throw new Error('워크플로우 호출에 실패했습니다.');
+            }
 
-            setResult(content);
+            const data = await response.json();
+
+            // Assuming n8n returns { content: "..." } or similar
+            // If the response structure differs, we adjust here
+            const generatedContent = data.output || data.content || (typeof data === 'string' ? data : JSON.stringify(data, null, 2));
+
+            setResult(generatedContent);
+        } catch (error) {
+            console.error('Generation Error:', error);
+            setResult('콘텐츠 생성 중 오류가 발생했습니다. n8n 워크플로우 활성화 상태를 확인해 주세요.');
+        } finally {
             setIsGenerating(false);
-        }, 2000);
+        }
     };
 
     return (

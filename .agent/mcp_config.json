@@ -49,6 +49,25 @@
             "env": {
                 "SUPABASE_ACCESS_TOKEN": "sbp_3046079a3071f1d93282a089535e1d9330dcd60a"
             }
+        },
+        "n8n": {
+            "command": "node",
+            "args": [
+                "c:/marcom/node_modules/@iflow-mcp/n8n-mcp/dist/mcp/index.js"
+            ],
+            "env": {
+                "N8N_API_URL": "https://primary-production-89e96.up.railway.app",
+                "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1OWY1NGRjMi0yNDU0LTRmZDgtOWRmNy1lM2YwZmY1MzY2MmYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzcwOTUxNDM5fQ.sBLnI7Xf5S4hqwsKAhv2kFfTs7RCeVELGoM1xLj_et4"
+            }
+        },
+        "railway": {
+            "command": "node",
+            "args": [
+                "c:/marcom/node_modules/@railway/mcp-server/dist/index.js"
+            ],
+            "env": {
+                "RAILWAY_TOKEN": "34f5e5ef-6fca-4143-ba1d-a76afa863a01"
+            }
         }
     }
 }

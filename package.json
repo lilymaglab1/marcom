@@ -20,10 +20,16 @@
   },
   "dependencies": {
     "@_davideast/stitch-mcp": "^0.3.2",
+    "@iflow-mcp/n8n-mcp": "^2.26.3",
     "@iflow-mcp/notebooklm-mcp": "^1.2.0",
     "@modelcontextprotocol/server-filesystem": "^2026.1.14",
     "@modelcontextprotocol/server-gdrive": "^2025.1.14",
     "@modelcontextprotocol/server-postgres": "^0.6.2",
-    "@supabase/mcp-server-supabase": "^0.6.3"
+    "@supabase/mcp-server-supabase": "^0.6.3",
+    "is-thirteen": "^2.0.0"
+  },
+  "devDependencies": {
+    "@railway/cli": "^4.30.1",
+    "@railway/mcp-server": "^0.1.8"
   }
 }

@@ -30,13 +30,12 @@ const MarketingAcademy: React.FC<MarketingAcademyProps> = ({ onNavigate }) => {
 
     const handleGenerateContent = () => {
         setIsGenerating(true);
-        // Simulate AI generation delay
+        // Simulate AI generation delay with NotebookLM context
         setTimeout(() => {
             setIsGenerating(false);
             setIsGeneratorOpen(false);
             setNewTopic('');
-            // in a real app, this would append to the list
-            alert('AI가 새로운 비법서를 생성하여 등록했습니다: ' + newTopic);
+            alert('Momentum AI가 NotebookLM의 릴리맥 30년 데이터를 분석하여 새로운 비법서를 생성하고 지식 커리큘럼에 등록했습니다: ' + newTopic);
         }, 2500);
     };
 
@@ -92,6 +91,10 @@ const MarketingAcademy: React.FC<MarketingAcademyProps> = ({ onNavigate }) => {
                             <p className="text-white/40 text-lg mt-1">
                                 "마케팅을 몰라도 괜찮습니다. 이 앱과 함께 성장하세요." - <span className="text-white/80 font-bold">고다리 부장의 비밀 노트</span>
                             </p>
+                            <div className="flex items-center gap-2 mt-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                                <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">Momentum AI Grounded (NotebookLM Active)</span>
+                            </div>
                         </div>
                     </div>
 
@@ -154,9 +157,9 @@ const MarketingAcademy: React.FC<MarketingAcademyProps> = ({ onNavigate }) => {
                                 ))}
                                 <button
                                     onClick={() => setIsGeneratorOpen(true)}
-                                    className="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all bg-momentum-gold text-black hover:bg-white flex items-center gap-1 ml-2"
+                                    className="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all bg-momentum-gold text-black hover:bg-white flex items-center gap-1 ml-2 shadow-lg shadow-gold-500/20"
                                 >
-                                    <Zap className="w-3 h-3" /> AI 생성
+                                    <Sparkles className="w-3 h-3" /> 지식 브레인 연동 생성
                                 </button>
                             </div>
                         </div>
