@@ -1,0 +1,12 @@
+{
+    "rewrites": [
+        {
+            "source": "/api/n8n/:path*",
+            "destination": "https://primary-production-89e96.up.railway.app/:path*"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}

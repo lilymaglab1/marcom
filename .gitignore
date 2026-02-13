@@ -1,6 +1,6 @@
 node_modules/
 .env*
-*.json
+# *.json - Removed to allow package.json, vercel.json, etc.
 *.keys.json
 .gdrive-server-credentials.json
 test_path.mjs
