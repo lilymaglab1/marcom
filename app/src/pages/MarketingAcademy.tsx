@@ -218,9 +218,9 @@ const MarketingAcademy: React.FC<MarketingAcademyProps> = ({ onNavigate }) => {
                                         <p className="text-white/40 text-sm leading-relaxed line-clamp-2 group-hover:text-white/60 transition-colors">
                                             {item.description}
                                         </p>
-                                        <div className="flex flex-wrap gap-1 mt-3">
+                                        <div className="flex flex-wrap gap-2 mt-4">
                                             {item.tags.slice(0, 3).map(tag => (
-                                                <span key={tag} className="text-[10px] text-momentum-blue/80 opacity-60">
+                                                <span key={tag} className="px-2 py-0.5 rounded-md bg-momentum-blue/10 border border-momentum-blue/20 text-[9px] font-black text-momentum-blue uppercase tracking-tighter">
                                                     {tag}
                                                 </span>
                                             ))}
