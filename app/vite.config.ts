@@ -7,7 +7,7 @@ export default defineConfig({
     server: {
         proxy: {
             '/api/n8n': {
-                target: 'https://primary-production-89e96.up.railway.app',
+                target: 'http://localhost:5678',
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/api\/n8n/, '')
             }

@@ -1,0 +1,277 @@
+{
+  "updatedAt": "2026-02-13T10:08:26.616Z",
+  "createdAt": "2026-02-13T10:07:31.835Z",
+  "id": "VrE4giq4b0V7HcVz",
+  "name": "Lilymag Marketing Master [V4] - ENHANCED",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lilymag-studio-v4",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        400,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyBkMoSRT3ntho9BEiE5iX7v4h3ZSN63Lcc",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "contents",
+              "value": "={{ [{\n  \"parts\": [{\n    \"text\": \"당신은 릴리맥(Lilymag)의 수석 마케팅 디렉터입니다. 다음 키워드에 대해 블로그, 인스타그램, 쇼츠 대본을 각각 생성하세요.\\n\\n[브랜드 컨텍스트]\\n- 30년 전통의 공간 플라워 큐레이션 전문\\n- 철학: 꽃이 아닌 공간의 품격을 완성\\n- 주요 가치: 공간 조화(Space-First), 실패 없는 안목(Proven Expertise)\\n\\n[키워드]\\n\" + ($json.body.keyword || $json.body.topic || \"계절 꽃\") + \"\\n\\n[출력 형식 - JSON]\\n{\\n  \\\"blog\\\": { \\\"title\\\": \\\"\\\", \\\"content\\\": \\\"\\\", \\\"tags\\\": [] },\\n  \\\"instagram\\\": { \\\"caption\\\": \\\"\\\", \\\"hashtags\\\": [] },\\n  \\\"shorts\\\": { \\\"script\\\": \\\"\\\", \\\"overlay_text\\\": \\\"\\\" },\\n  \\\"image_prompt\\\": \\\"High-end flower arrangement in a luxury interior, realistic, 8k, professional photography\\\",\\n  \\\"status\\\": \\\"ready_for_approval\\\"\\n}\\n\\n주의: 모든 텍스트는 릴리맥 특유의 우아하고 전문적인 어조를 유지하세요. 응답은 오직 순수 JSON만 출력하세요.\"\n  }]\n}] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gemini-generator",
+      "name": "Gemini AI Content Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        620,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ \n  const content = JSON.parse($json.candidates[0].content.parts[0].text.replace(/```json|```/g, ''));\n  const keyword = $node[\"Webhook\"].json.body.keyword || \"flowers\";\n  content.image_url = `https://source.unsplash.com/featured/?flower,${encodeURIComponent(keyword)}`;\n  content.video_url = \"https://www.w3schools.com/html/mov_bbb.mp4\"; // Placeholder\n  return content;\n}}",
+        "options": {}
+      },
+      "id": "respond-node",
+      "name": "Respond to App",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        840,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Gemini AI Content Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini AI Content Generator": {
+      "main": [
+        [
+          {
+            "node": "Respond to App",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "349c6524-9010-4887-80e9-acefcf93f878",
+  "activeVersionId": "349c6524-9010-4887-80e9-acefcf93f878",
+  "versionCounter": 11,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-13T10:07:31.842Z",
+      "createdAt": "2026-02-13T10:07:31.842Z",
+      "role": "workflow:owner",
+      "workflowId": "VrE4giq4b0V7HcVz",
+      "projectId": "MoAGA7LIb5edqR6b",
+      "project": {
+        "updatedAt": "2026-02-13T09:58:49.927Z",
+        "createdAt": "2026-02-13T09:55:32.823Z",
+        "id": "MoAGA7LIb5edqR6b",
+        "name": "LEE SEAM <lilymag0301@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "64a2d71d-8897-455a-9656-655c1c7a85f2",
+        "projectRelations": [
+          {
+            "updatedAt": "2026-02-13T09:55:32.824Z",
+            "createdAt": "2026-02-13T09:55:32.824Z",
+            "userId": "64a2d71d-8897-455a-9656-655c1c7a85f2",
+            "projectId": "MoAGA7LIb5edqR6b",
+            "user": {
+              "updatedAt": "2026-02-13T09:58:56.000Z",
+              "createdAt": "2026-02-13T09:55:32.110Z",
+              "id": "64a2d71d-8897-455a-9656-655c1c7a85f2",
+              "email": "lilymag0301@gmail.com",
+              "firstName": "LEE",
+              "lastName": "SEAM",
+              "personalizationAnswers": {
+                "version": "v4",
+                "personalization_survey_submitted_at": "2026-02-13T09:58:56.130Z",
+                "personalization_survey_n8n_version": "2.7.4"
+              },
+              "settings": {
+                "userActivated": false
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-02-13",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-02-13T10:08:26.619Z",
+    "createdAt": "2026-02-13T10:08:26.619Z",
+    "versionId": "349c6524-9010-4887-80e9-acefcf93f878",
+    "workflowId": "VrE4giq4b0V7HcVz",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "lilymag-studio-v4",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "webhook-trigger",
+        "name": "Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          400,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyBkMoSRT3ntho9BEiE5iX7v4h3ZSN63Lcc",
+          "sendBody": true,
+          "contentType": "json",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "contents",
+                "value": "={{ [{\n  \"parts\": [{\n    \"text\": \"당신은 릴리맥(Lilymag)의 수석 마케팅 디렉터입니다. 다음 키워드에 대해 블로그, 인스타그램, 쇼츠 대본을 각각 생성하세요.\\n\\n[브랜드 컨텍스트]\\n- 30년 전통의 공간 플라워 큐레이션 전문\\n- 철학: 꽃이 아닌 공간의 품격을 완성\\n- 주요 가치: 공간 조화(Space-First), 실패 없는 안목(Proven Expertise)\\n\\n[키워드]\\n\" + ($json.body.keyword || $json.body.topic || \"계절 꽃\") + \"\\n\\n[출력 형식 - JSON]\\n{\\n  \\\"blog\\\": { \\\"title\\\": \\\"\\\", \\\"content\\\": \\\"\\\", \\\"tags\\\": [] },\\n  \\\"instagram\\\": { \\\"caption\\\": \\\"\\\", \\\"hashtags\\\": [] },\\n  \\\"shorts\\\": { \\\"script\\\": \\\"\\\", \\\"overlay_text\\\": \\\"\\\" },\\n  \\\"image_prompt\\\": \\\"High-end flower arrangement in a luxury interior, realistic, 8k, professional photography\\\",\\n  \\\"status\\\": \\\"ready_for_approval\\\"\\n}\\n\\n주의: 모든 텍스트는 릴리맥 특유의 우아하고 전문적인 어조를 유지하세요. 응답은 오직 순수 JSON만 출력하세요.\"\n  }]\n}] }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "gemini-generator",
+        "name": "Gemini AI Content Generator",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          620,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ \n  const content = JSON.parse($json.candidates[0].content.parts[0].text.replace(/```json|```/g, ''));\n  const keyword = $node[\"Webhook\"].json.body.keyword || \"flowers\";\n  content.image_url = `https://source.unsplash.com/featured/?flower,${encodeURIComponent(keyword)}`;\n  content.video_url = \"https://www.w3schools.com/html/mov_bbb.mp4\"; // Placeholder\n  return content;\n}}",
+          "options": {}
+        },
+        "id": "respond-node",
+        "name": "Respond to App",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          840,
+          400
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Gemini AI Content Generator",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Gemini AI Content Generator": {
+        "main": [
+          [
+            {
+              "node": "Respond to App",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "LEE SEAM",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-02-13T10:08:26.733Z",
+        "id": 3,
+        "workflowId": "VrE4giq4b0V7HcVz",
+        "versionId": "349c6524-9010-4887-80e9-acefcf93f878",
+        "event": "activated",
+        "userId": "64a2d71d-8897-455a-9656-655c1c7a85f2"
+      },
+      {
+        "createdAt": "2026-02-13T10:08:26.884Z",
+        "id": 4,
+        "workflowId": "VrE4giq4b0V7HcVz",
+        "versionId": "349c6524-9010-4887-80e9-acefcf93f878",
+        "event": "activated",
+        "userId": "64a2d71d-8897-455a-9656-655c1c7a85f2"
+      },
+      {
+        "createdAt": "2026-02-13T10:13:17.168Z",
+        "id": 7,
+        "workflowId": "VrE4giq4b0V7HcVz",
+        "versionId": "349c6524-9010-4887-80e9-acefcf93f878",
+        "event": "activated",
+        "userId": "64a2d71d-8897-455a-9656-655c1c7a85f2"
+      },
+      {
+        "createdAt": "2026-02-13T10:13:16.066Z",
+        "id": 6,
+        "workflowId": "VrE4giq4b0V7HcVz",
+        "versionId": "349c6524-9010-4887-80e9-acefcf93f878",
+        "event": "deactivated",
+        "userId": "64a2d71d-8897-455a-9656-655c1c7a85f2"
+      }
+    ]
+  }
+}

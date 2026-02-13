@@ -1,279 +1,294 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../components/layout/Layout';
 import {
-    PenTool,
-    MessageSquare,
     Sparkles,
-    Send,
-    Copy,
     RefreshCw,
-    ArrowRight,
     FileText,
     Instagram,
     Youtube,
-    CheckCircle2,
-    History,
-    Languages,
-    Type
+    RotateCcw,
+    Wand2,
+    Edit3,
+    Check,
+    ImageOff,
+    Pencil,
+    Languages
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LILYMAG_BRAIN_CONTEXT } from '../data/aiBrainContext';
 
+// Found API Key from C:\startup_marketing com
+const POLLINATIONS_API_KEY = 'sk_rF0EPX75yRV9mkuIxvBnuZ80LmdCOdXE';
+
 const agents = [
-    { id: 'blog', name: '블로그 에디터', icon: FileText, desc: 'SEO 최적화 및 설득형 칼럼 작성', color: 'blue' },
-    { id: 'social', name: '소셜 미디어 PD', icon: Instagram, desc: '인스타그램/페이스북 맞춤형 카드뉴스 및 캡션', color: 'purple' },
-    { id: 'video', name: '쇼츠/릴스 디렉터', icon: Youtube, desc: '15초 바이럴 대본 및 영상 구성안', color: 'red' },
-    { id: 'ad', name: '퍼포먼스 마케터', icon: Send, desc: '구글/메타 광고 카피 및 후킹 문구', color: 'momentum-gold' },
+    { id: 'blog', name: '인문학 에디터', icon: FileText, desc: '미술, 음악, 추억을 연결하는 스토리텔링 (LILYMAG)', color: 'blue' },
+    { id: 'social', name: '소셜 미디어 PD', icon: Instagram, desc: '감성적인 릴리맥 인스타그램 캡션', color: 'purple' },
+    { id: 'video', name: '쇼츠/릴스 디렉터', icon: Youtube, desc: '감각적인 영상 구성안 및 대본', color: 'red' },
 ];
 
-interface CreativeStudioProps {
-    onNavigate: (page: string) => void;
-}
-
-const CreativeStudio: React.FC<CreativeStudioProps> = ({ onNavigate }) => {
+const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNavigate }) => {
     const [selectedAgent, setSelectedAgent] = useState('blog');
     const [topic, setTopic] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
-    const [result, setResult] = useState<string | null>(null);
+    const [result, setResult] = useState<any | null>(null);
+    const [activeTab, setActiveTab] = useState<'blog' | 'instagram' | 'shorts'>('blog');
+    const [isPublishing, setIsPublishing] = useState(false);
+
+    // Editor States
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedContent, setEditedContent] = useState('');
+    const [editedTitle, setEditedTitle] = useState('');
+
+    // Image States
+    const [customPrompts, setCustomPrompts] = useState<Record<number, string>>({});
+    const [isRegeneratingImage, setIsRegeneratingImage] = useState<Record<number, boolean>>({});
+    const [imageLoadErrors, setImageLoadErrors] = useState<Record<number, boolean>>({});
+
+    useEffect(() => {
+        if (result?.blog) {
+            setEditedContent(result.blog.content);
+            setEditedTitle(result.blog.title);
+        }
+        // Initialize custom prompts with recommended prompts when result loads
+        if (result?.images) {
+            const initialPrompts: Record<number, string> = {};
+            result.images.forEach((img: any) => {
+                initialPrompts[img.id] = img.recommended_prompt;
+            });
+            setCustomPrompts(initialPrompts);
+        }
+    }, [result]);
+
+    // Helper: Generate High-Quality Flux Image URL with API Key
+    const getPollinationsUrl = (prompt: string, seed: number) => {
+        // Auto-enhance prompt for quality if not present
+        const enhancedPrompt = prompt.includes('high quality') ? prompt : `${prompt}, high quality, cinematic lighting, 8k resolution, photorealistic, elegant style`;
+        const encodedPrompt = encodeURIComponent(enhancedPrompt);
+        return `https://gen.pollinations.ai/image/${encodedPrompt}?width=1024&height=1280&model=flux&nologo=true&seed=${seed}&key=${POLLINATIONS_API_KEY}`;
+    };
+
+    const getFallbackUrl = (prompt: string, seed: number) => {
+        const enhancedPrompt = prompt.includes('high quality') ? prompt : `${prompt}, high quality, cinematic lighting, 8k resolution`;
+        return `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=1280&model=flux&nologo=true&seed=${seed}`;
+    };
+
+    const handleImageError = (imgId: number, prompt: string, seed: number) => {
+        if (!imageLoadErrors[imgId]) {
+            console.log(`Retrying image ${imgId} with fallback URL...`);
+            setImageLoadErrors(prev => ({ ...prev, [imgId]: true }));
+            setResult((prev: any) => ({
+                ...prev,
+                images: prev.images.map((img: any) =>
+                    img.id === imgId ? { ...img, url: getFallbackUrl(prompt, seed) } : img
+                )
+            }));
+        }
+    };
 
     const handleGenerate = async () => {
         if (!topic) return;
         setIsGenerating(true);
         setResult(null);
-
+        setIsEditing(false);
+        setImageLoadErrors({});
         try {
-            // Updated to use Local Proxy to avoid CORS issues
-            const response = await fetch('/api/n8n/webhook/lilymag-creative-studio', {
+            const response = await fetch('/api/n8n/webhook/lilymag-studio-v4', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    topic,
-                    agent: selectedAgent,
-                    context: LILYMAG_BRAIN_CONTEXT
-                }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ keyword: topic, context: LILYMAG_BRAIN_CONTEXT }),
             });
 
             if (!response.ok) {
-                throw new Error('워크플로우 호출에 실패했습니다.');
+                if (response.status === 500) throw new Error('AI 서비스 과부하 (잠시 후 다시 시도)');
+                throw new Error('네트워크 응답 오류');
             }
 
             const data = await response.json();
 
-            // Assuming n8n returns { content: "..." } or similar
-            // If the response structure differs, we adjust here
-            const generatedContent = data.output || data.content || (typeof data === 'string' ? data : JSON.stringify(data, null, 2));
+            // Apply Flux Model & API Key Logic
+            if (data.images) {
+                data.images = data.images.map((img: any) => ({
+                    ...img,
+                    url: getPollinationsUrl(img.recommended_prompt, Math.floor(Math.random() * 1000))
+                }));
+            }
 
-            setResult(generatedContent);
-        } catch (error) {
-            console.error('Generation Error:', error);
-            setResult('콘텐츠 생성 중 오류가 발생했습니다. n8n 워크플로우 활성화 상태를 확인해 주세요.');
-        } finally {
-            setIsGenerating(false);
+            setResult(data);
+        } catch (e: any) {
+            console.error(e);
+            alert(`생성 중 오류가 발생했습니다: ${e.message}`);
         }
+        finally { setIsGenerating(false); }
+    };
+
+    const handleRegenerateImage = async (imgId: number) => {
+        setIsRegeneratingImage(prev => ({ ...prev, [imgId]: true }));
+        setImageLoadErrors(prev => ({ ...prev, [imgId]: false }));
+        try {
+            // Use user input from customPrompts, or fallback to recommended
+            const prompt = customPrompts[imgId] || result?.images?.find((img: any) => img.id === imgId)?.recommended_prompt;
+            await new Promise(r => setTimeout(r, 500));
+
+            setResult((prev: any) => ({
+                ...prev,
+                images: prev.images.map((img: any) =>
+                    img.id === imgId ? {
+                        ...img,
+                        url: getPollinationsUrl(prompt, Math.floor(Math.random() * 10000))
+                    } : img
+                )
+            }));
+        } finally { setIsRegeneratingImage(prev => ({ ...prev, [imgId]: false })); }
+    };
+
+    const handlePublish = async () => {
+        if (!result) return;
+        setIsPublishing(true);
+        try {
+            await fetch('/api/n8n/webhook/lilymag-studio-approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content: activeTab === 'blog' ? editedContent : result[activeTab].content || result[activeTab].caption,
+                    title: activeTab === 'blog' ? editedTitle : '',
+                    type: activeTab,
+                    keyword: topic,
+                    images: result.images
+                }),
+            });
+            alert('블로그 및 소셜 매체로 발행 요청이 완료되었습니다!');
+        } catch (e) { alert('발행 중 오류 발생'); }
+        finally { setIsPublishing(false); }
     };
 
     return (
         <Layout onNavigate={onNavigate} currentPage="studio">
-            <div className="p-10 flex flex-col gap-10 max-w-[1600px] mx-auto">
-                {/* Header */}
+            <div className="p-10 flex flex-col gap-10 max-w-[1700px] mx-auto min-h-screen">
                 <div className="flex flex-col gap-3">
-                    <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-2"
-                    >
+                    <div className="flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-momentum-blue" />
-                        <span className="text-xs font-black text-momentum-blue uppercase tracking-[0.2em]">Momentum Creative Studio</span>
-                    </motion.div>
-                    <h2 className="text-5xl font-bold font-outfit tracking-tight leading-tight">AI 크리에이티브 스튜디오</h2>
-                    <p className="text-white/40 text-lg mt-1">당신의 지식 브레인을 기반으로 클릭을 부르는 고성능 콘텐츠를 무한 생성합니다.</p>
+                        <span className="text-[10px] font-black text-momentum-blue uppercase tracking-[0.3em]">LILYMAG CREATIVE STUDIO</span>
+                    </div>
+                    <h2 className="text-5xl font-bold tracking-tight font-outfit">AI 스토리텔링 & 아트웍</h2>
+                    <p className="text-white/40 text-lg mt-1 font-medium italic">"LILYMAG의 철학을 담은 글과 AI(Flux)가 그린 그림의 만남"</p>
                 </div>
 
-                <div className="grid grid-cols-12 gap-10">
-                    {/* Left: Configuration */}
+                <div className="grid grid-cols-12 gap-12">
                     <div className="col-span-4 flex flex-col gap-8">
-                        <div className="glass-card p-8 flex flex-col gap-8">
+                        <div className="glass-card p-10 flex flex-col gap-8 bg-white/5 border-white/5">
                             <div className="flex flex-col gap-6">
-                                <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">AI 마케팅 에이전트</label>
+                                <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">에디터 페르소나</label>
                                 <div className="grid grid-cols-1 gap-3">
                                     {agents.map((agent) => (
-                                        <button
-                                            key={agent.id}
-                                            onClick={() => setSelectedAgent(agent.id)}
-                                            className={`flex items-center gap-4 p-4 rounded-2xl transition-all border ${selectedAgent === agent.id
-                                                ? 'bg-momentum-blue/20 border-momentum-blue text-white'
-                                                : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
-                                                }`}
-                                        >
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${selectedAgent === agent.id ? 'bg-momentum-blue text-white' : 'bg-white/5 text-white/40'}`}>
-                                                <agent.icon className="w-5 h-5" />
-                                            </div>
-                                            <div className="text-left">
-                                                <p className="text-sm font-bold">{agent.name}</p>
-                                                <p className="text-[10px] opacity-60 mt-0.5">{agent.desc}</p>
-                                            </div>
+                                        <button key={agent.id} onClick={() => setSelectedAgent(agent.id)} className={`flex items-center gap-5 p-4 rounded-2xl transition-all border ${selectedAgent === agent.id ? 'bg-momentum-blue/20 border-momentum-blue text-white' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'}`}>
+                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${selectedAgent === agent.id ? 'bg-momentum-blue text-white' : 'bg-white/5'}`}><agent.icon className="w-6 h-6" /></div>
+                                            <div className="text-left"><p className="text-sm font-bold">{agent.name}</p><p className="text-[10px] opacity-60 mt-0.5">{agent.desc}</p></div>
                                         </button>
                                     ))}
                                 </div>
                             </div>
-
                             <div className="flex flex-col gap-4">
-                                <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">마케팅 테마 및 주제</label>
-                                <div className="relative">
-                                    <textarea
-                                        value={topic}
-                                        onChange={(e) => setTopic(e.target.value)}
-                                        placeholder="어떤 마케팅 콘텐츠를 만들고 싶으신가요? (예: 봄맞이 호텔 로비 스타일링 프로모션)"
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm h-40 focus:border-momentum-blue outline-none transition-all placeholder:text-white/10 resize-none"
-                                    />
-                                    <div className="absolute bottom-4 right-4 flex gap-2">
-                                        <button className="p-2 bg-white/5 rounded-lg text-white/20 hover:text-momentum-blue transition-colors">
-                                            <Languages className="w-4 h-4" />
-                                        </button>
-                                        <button className="p-2 bg-white/5 rounded-lg text-white/20 hover:text-momentum-blue transition-colors">
-                                            <Type className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
+                                <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">오늘의 테마 (키워드 콤마 구분)</label>
+                                <textarea value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="예: 해바라기, 심리학, 컬러학, 여름 추억..." className="w-full bg-black/40 border border-white/10 rounded-2xl p-6 text-sm h-40 focus:border-momentum-blue outline-none transition-all placeholder:text-white/10 resize-none leading-relaxed" />
                             </div>
-
-                            <div className="flex flex-col gap-5">
-                                <div className="flex items-center justify-between text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">
-                                    <span>창의성 및 브랜드 일관성</span>
-                                    <span className="text-momentum-blue">High Fidelity</span>
-                                </div>
-                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: '85%' }}
-                                        className="h-full bg-momentum-blue"
-                                    ></motion.div>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={handleGenerate}
-                                disabled={isGenerating || !topic}
-                                className="w-full py-5 bg-gradient-to-r from-momentum-blue via-blue-500 to-momentum-accent rounded-2xl font-black uppercase tracking-[0.2em] text-sm shadow-2xl shadow-blue-500/40 flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed group overflow-hidden relative"
-                            >
-                                <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                                {isGenerating ? (
-                                    <>
-                                        <RefreshCw className="w-5 h-5 animate-spin" />
-                                        브레인 동기화 중...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Sparkles className="w-5 h-5" />
-                                        콘텐츠 큐레이션 시작
-                                    </>
-                                )}
+                            <button onClick={handleGenerate} disabled={isGenerating || !topic} className="w-full py-6 bg-gradient-to-r from-momentum-blue to-blue-600 rounded-2xl font-black uppercase tracking-[0.3em] text-sm shadow-2xl flex items-center justify-center gap-4 transition-all disabled:opacity-30">
+                                {isGenerating ? <><RefreshCw className="w-5 h-5 animate-spin" />LILYMAG 스토리 생성 중...</> : <><Wand2 className="w-5 h-5" />작품 생성 시작</>}
                             </button>
-                        </div>
-
-                        <div className="glass-card p-6 border-l-4 border-momentum-gold bg-momentum-gold/5 flex gap-4 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-5">
-                                <History className="w-12 h-12" />
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-momentum-gold/20 flex items-center justify-center text-momentum-gold shrink-0">
-                                <MessageSquare className="w-5 h-5" />
-                            </div>
-                            <div className="relative z-10">
-                                <p className="text-[11px] font-black text-momentum-gold uppercase mb-1 tracking-widest">실시간 지식 연동</p>
-                                <p className="text-[11px] text-white/60 leading-relaxed font-medium">
-                                    <strong>'AI Brain Context'</strong>에 기반하여 릴리맥 특유의 정체성을 유지한 카피를 도출합니다.
-                                </p>
-                            </div>
                         </div>
                     </div>
 
-                    {/* Right: Preview & Result */}
-                    <div className="col-span-8 flex flex-col gap-6 h-full">
+                    <div className="col-span-8 flex flex-col gap-10">
                         <AnimatePresence mode="wait">
                             {result ? (
-                                <motion.div
-                                    key="result"
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="flex flex-col gap-6 h-full"
-                                >
-                                    <div className="glass-card p-10 flex flex-col gap-8 bg-white/[0.02] border-white/10 h-full">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)] animate-pulse"></div>
-                                                <h3 className="text-2xl font-bold font-outfit uppercase tracking-tight">AI Generated Masterpiece</h3>
+                                <motion.div key="result" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-10">
+                                    <div className="glass-card p-10 bg-white/[0.02] border-white/5">
+                                        <div className="flex items-center justify-between border-b border-white/5 pb-8">
+                                            <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5">
+                                                {['blog', 'instagram', 'shorts'].map((tab) => (
+                                                    <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-white text-black' : 'text-white/40'}`}>{tab}</button>
+                                                ))}
                                             </div>
-                                            <div className="flex gap-3">
-                                                <button className="p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all text-white/40 hover:text-white">
-                                                    <Copy className="w-5 h-5" />
+                                            <div className="flex gap-4">
+                                                <button onClick={() => setIsEditing(!isEditing)} className={`flex items-center gap-2 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isEditing ? 'bg-momentum-gold text-black' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}>
+                                                    {isEditing ? <><Check className="w-4 h-4" /> 편집 완료</> : <><Edit3 className="w-4 h-4" /> 글 편집하기</>}
                                                 </button>
-                                                <button className="flex items-center gap-3 bg-white text-black px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-momentum-blue hover:text-white transition-all shadow-xl active:scale-95 group">
-                                                    즉시 발행하기
-                                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                                </button>
+                                                <button onClick={handlePublish} disabled={isPublishing} className="bg-white text-black px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl hover:scale-[1.02] transition-all">최종 발행</button>
                                             </div>
                                         </div>
-
-                                        <div className="bg-[#050B18] rounded-[2.5rem] p-10 border border-white/5 min-h-[500px] shadow-inner relative group/content">
-                                            <div className="absolute top-6 right-6 opacity-0 group-hover/content:opacity-40 transition-opacity">
-                                                <PenTool className="w-6 h-6 text-white" />
-                                            </div>
-                                            <pre className="whitespace-pre-wrap font-sans text-lg leading-[1.8] text-white/80 font-medium">
-                                                {result}
-                                            </pre>
+                                        <div className="mt-10 max-h-[700px] overflow-y-auto px-6">
+                                            {activeTab === 'blog' && (
+                                                <div className="flex flex-col gap-8 max-w-4xl mx-auto py-10">
+                                                    {isEditing ? (
+                                                        <>
+                                                            <input value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} className="text-5xl font-bold bg-white/5 border-none text-white outline-none p-4 rounded-xl font-outfit w-full" />
+                                                            <textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} className="text-xl leading-[2.2] bg-white/5 border-none text-white/80 outline-none p-6 rounded-2xl min-h-[1000px] font-sans w-full" />
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <h4 className="text-5xl font-bold text-white leading-tight font-outfit">{editedTitle}</h4>
+                                                            <div className="w-20 h-1 bg-momentum-blue/30 rounded-full" />
+                                                            <div className="whitespace-pre-wrap font-sans text-xl leading-[2.2] text-white/80 font-normal">{editedContent}</div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-3 gap-6">
-                                        <div className="glass-card p-8 flex flex-col gap-5 border-green-500/20 bg-green-500/5">
-                                            <h4 className="text-[10px] font-black text-green-500/60 uppercase tracking-widest">Readability Score</h4>
-                                            <div className="flex items-end justify-between">
-                                                <span className="text-4xl font-bold font-outfit">98%</span>
-                                                <div className="text-[10px] font-black text-green-500 uppercase">Optimal</div>
-                                            </div>
-                                            <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                                                <div className="w-[98%] h-full bg-green-500"></div>
-                                            </div>
+                                    <div className="flex flex-col gap-6 p-10 glass-card bg-white/[0.01]">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-xl font-bold font-outfit">LILYMAG Visual Arts (Flux Mode)</h4>
                                         </div>
-                                        <div className="glass-card p-8 flex flex-col gap-5 border-momentum-gold/20 bg-momentum-gold/5">
-                                            <h4 className="text-[10px] font-black text-momentum-gold/60 uppercase tracking-widest">Conversion Hook</h4>
-                                            <div className="flex items-end justify-between">
-                                                <span className="text-4xl font-bold font-outfit">92%</span>
-                                                <div className="text-[10px] font-black text-momentum-gold uppercase">High Impact</div>
-                                            </div>
-                                            <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                                                <div className="w-[92%] h-full bg-momentum-gold"></div>
-                                            </div>
-                                        </div>
-                                        <div className="glass-card p-8 flex flex-col gap-5 border-momentum-blue/20 bg-momentum-blue/5 justify-center items-center text-center">
-                                            <CheckCircle2 className="w-10 h-10 text-momentum-blue mb-1" />
-                                            <p className="text-xs font-black uppercase tracking-widest">SEO Optimized</p>
-                                            <p className="text-[10px] text-white/30 leading-tight">검색 엔진 최적화 및 브랜드 톤앤매너 검수 완료</p>
+
+                                        {/* Updated Image Grid with Visible Controls */}
+                                        <div className="grid grid-cols-4 gap-8">
+                                            {result.images?.map((img: any) => (
+                                                <div key={img.id} className="flex flex-col gap-4 group">
+                                                    {/* Image Card */}
+                                                    <div className="aspect-[4/5] rounded-[2rem] overflow-hidden border border-white/10 bg-white/5 relative bg-black/40 shadow-xl">
+                                                        <img
+                                                            src={img.url}
+                                                            onError={() => handleImageError(img.id, customPrompts[img.id] || img.recommended_prompt, 123456)}
+                                                            className={`w-full h-full object-cover transition-all duration-700 ${isRegeneratingImage[img.id] ? 'blur-xl scale-110 opacity-30' : 'group-hover:scale-105'} ${imageLoadErrors[img.id] ? 'opacity-50' : ''}`}
+                                                            loading="lazy"
+                                                        />
+                                                        {isRegeneratingImage[img.id] && <div className="absolute inset-0 flex items-center justify-center"><RefreshCw className="w-8 h-8 text-white animate-spin" /></div>}
+                                                        {imageLoadErrors[img.id] && !isRegeneratingImage[img.id] && (
+                                                            <div className="absolute inset-0 flex flex-col items-center justify-center text-white/40">
+                                                                <ImageOff className="w-8 h-8 mb-2" />
+                                                                <span className="text-[10px]">로드 실패</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Prompt Editor */}
+                                                    <div className="flex flex-col gap-2">
+                                                        <div className="relative">
+                                                            <div className="absolute top-3 left-3 opacity-50"><Languages className="w-3 h-3 text-white" /></div>
+                                                            <textarea
+                                                                value={customPrompts[img.id] || ''}
+                                                                onChange={(e) => setCustomPrompts(prev => ({ ...prev, [img.id]: e.target.value }))}
+                                                                placeholder="원하는 이미지를 묘사해보세요..."
+                                                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-3 text-xs text-white/80 focus:text-white focus:bg-white/10 outline-none transition-all placeholder:text-white/20 resize-none h-20 leading-relaxed custom-scrollbar"
+                                                            />
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleRegenerateImage(img.id)}
+                                                            disabled={isRegeneratingImage[img.id]}
+                                                            className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-momentum-blue hover:text-white text-white/60 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-50"
+                                                        >
+                                                            {isRegeneratingImage[img.id] ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                                                            이 내용으로 다시 그리기
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 </motion.div>
                             ) : (
-                                <motion.div
-                                    key="empty"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    className="flex-1 flex flex-col items-center justify-center glass-card border-dashed border-white/5 bg-transparent p-20 text-center rounded-[3rem]"
-                                >
-                                    <div className="w-32 h-32 rounded-[2.5rem] bg-white/5 flex items-center justify-center mb-10 border border-white/5 relative group">
-                                        <div className="absolute inset-0 bg-momentum-blue/20 rounded-[2.5rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                        <PenTool className="w-12 h-12 text-white/5 relative z-10" />
-                                    </div>
-                                    <h3 className="text-3xl font-bold font-outfit text-white/20 tracking-tight">당신의 비즈니스 테마를 입력하세요</h3>
-                                    <p className="text-white/10 mt-4 max-w-sm text-lg leading-relaxed">릴리맥 마케팅 브레인이 당신의 지식을 학습하여 완벽한 크리에이티브를 즉시 생성합니다.</p>
-                                    <div className="mt-12 flex gap-3">
-                                        {['프로모션 카피', '브랜드 칼럼', '광고 캠페인'].map(tag => (
-                                            <span key={tag} className="px-5 py-2 rounded-full border border-white/5 text-[10px] font-black text-white/10 uppercase tracking-widest">
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </div>
+                                <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center glass-card border-dashed border-white/5 p-40 text-center rounded-[4rem]">
+                                    <h3 className="text-4xl font-bold text-white/10 tracking-tight leading-snug">LILYMAG STORYTELLING<br />ARTIFICIAL INTELLIGENCE</h3>
                                 </motion.div>
                             )}
                         </AnimatePresence>

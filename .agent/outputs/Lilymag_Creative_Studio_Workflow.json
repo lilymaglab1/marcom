@@ -1,0 +1,92 @@
+{
+    "name": "Lilymag Creative Studio Engine [Final]",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "lilymag-creative-studio",
+                "options": {}
+            },
+            "id": "webhook-node",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ],
+            "webhookId": "lilymag-creative-studio"
+        },
+        {
+            "parameters": {
+                "modelId": {
+                    "__rl": true,
+                    "value": "gpt-4o",
+                    "mode": "list",
+                    "cachedResultName": "gpt-4o"
+                },
+                "messages": {
+                    "values": [
+                        {
+                            "content": "당신은 30년 전통의 프리미엄 꽃 브랜드 '릴리맥'의 수석 크리에이티브 디렉터 '고다리 부장'입니다.\n\n[주제]: {{ $json.body.topic }}\n[에이전트 타입]: {{ $json.body.agent }}\n[브랜드 철학]: {{ $json.body.context.philosophy }}\n[강점/USP]: {{ JSON.stringify($json.body.context.usps) }}\n[역사]: {{ $json.body.context.history }}\n\n### 지시사항:\n1. 30년 전통의 깊이와 트렌디한 감각이 공존하는 어조를 사용하세요.\n2. 단순히 상품을 홍보하는 것이 아니라, 해당 주제가 고객의 공간과 삶에 어떤 품격을 더하는지 인문학적으로 접근하세요.\n3. 에이전트 타입({{ $json.body.agent }})에 맞춰 구조를 잡으세요:\n   - blog: 장문의 전문적인 칼럼 (소제목 포함)\n   - social: 인스타그램용 감성 캡션과 해시태그\n   - video: 쇼츠/릴스용 훅이 강한 대본\n   - ad: 전환을 유도하는 강력한 광고 카피\n4. 출력은 반드시 마크다운 형식을 제외한 순수 텍스트(또는 문단 구분)로 해주세요.",
+                            "role": "system"
+                        },
+                        {
+                            "content": "{{ $json.body.topic }}에 대한 릴리맥만의 특별한 콘텐츠를 작성해줘.",
+                            "role": "user"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "openai-node",
+            "name": "OpenAI",
+            "type": "n8n-nodes-base.openAi",
+            "typeVersion": 1.1,
+            "position": [
+                500,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "allIncomingItems",
+                "options": {
+                    "responseBody": "{\n  \"output\": \"{{ $json.choices[0].message.content.replace(/\\n/g, '\\\\n').replace(/\"/g, '\\\\\"') }}\"\n}"
+                }
+            },
+            "id": "respond-node",
+            "name": "Respond to Webhook",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                750,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "webhook-node": {
+            "main": [
+                [
+                    {
+                        "node": "openai-node",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "openai-node": {
+            "main": [
+                [
+                    {
+                        "node": "respond-node",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

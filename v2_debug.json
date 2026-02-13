@@ -1,0 +1,255 @@
+{
+  "updatedAt": "2026-02-13T10:26:36.340Z",
+  "createdAt": "2026-02-13T10:00:51.874Z",
+  "id": "xGoI8eWhSA2HVS6R",
+  "name": "Lilymag Marketing Master [V7]",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lilymag-studio-v4",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        400,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "dummy",
+              "value": "{\"blog\":{\"title\":\"Test\",\"content\":\"Content\",\"tags\":[]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-2",
+      "name": "Set Dummy Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        620,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.parse($json.dummy) }}",
+        "options": {}
+      },
+      "id": "node-3",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        840,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Set Dummy Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Dummy Data": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "ab515eb2-5643-4fbc-866f-714651275d8f",
+  "activeVersionId": "ab515eb2-5643-4fbc-866f-714651275d8f",
+  "versionCounter": 44,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-13T10:00:51.879Z",
+      "createdAt": "2026-02-13T10:00:51.879Z",
+      "role": "workflow:owner",
+      "workflowId": "xGoI8eWhSA2HVS6R",
+      "projectId": "MoAGA7LIb5edqR6b",
+      "project": {
+        "updatedAt": "2026-02-13T09:58:49.927Z",
+        "createdAt": "2026-02-13T09:55:32.823Z",
+        "id": "MoAGA7LIb5edqR6b",
+        "name": "LEE SEAM <lilymag0301@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "64a2d71d-8897-455a-9656-655c1c7a85f2",
+        "projectRelations": [
+          {
+            "updatedAt": "2026-02-13T09:55:32.824Z",
+            "createdAt": "2026-02-13T09:55:32.824Z",
+            "userId": "64a2d71d-8897-455a-9656-655c1c7a85f2",
+            "projectId": "MoAGA7LIb5edqR6b",
+            "user": {
+              "updatedAt": "2026-02-13T10:20:23.389Z",
+              "createdAt": "2026-02-13T09:55:32.110Z",
+              "id": "64a2d71d-8897-455a-9656-655c1c7a85f2",
+              "email": "lilymag0301@gmail.com",
+              "firstName": "LEE",
+              "lastName": "SEAM",
+              "personalizationAnswers": {
+                "version": "v4",
+                "personalization_survey_submitted_at": "2026-02-13T09:58:56.130Z",
+                "personalization_survey_n8n_version": "2.7.4"
+              },
+              "settings": {
+                "userActivated": true,
+                "firstSuccessfulWorkflowId": "xGoI8eWhSA2HVS6R",
+                "userActivatedAt": 1770978023362
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-02-13",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-02-13T10:26:36.342Z",
+    "createdAt": "2026-02-13T10:26:36.342Z",
+    "versionId": "ab515eb2-5643-4fbc-866f-714651275d8f",
+    "workflowId": "xGoI8eWhSA2HVS6R",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "lilymag-studio-v4",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "node-1",
+        "name": "Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          400,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "values": {
+            "string": [
+              {
+                "name": "dummy",
+                "value": "{\"blog\":{\"title\":\"Test\",\"content\":\"Content\",\"tags\":[]}}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "node-2",
+        "name": "Set Dummy Data",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 2,
+        "position": [
+          620,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.parse($json.dummy) }}",
+          "options": {}
+        },
+        "id": "node-3",
+        "name": "Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          840,
+          400
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Set Dummy Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Set Dummy Data": {
+        "main": [
+          [
+            {
+              "node": "Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "LEE SEAM",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-02-13T10:26:36.423Z",
+        "id": 22,
+        "workflowId": "xGoI8eWhSA2HVS6R",
+        "versionId": "ab515eb2-5643-4fbc-866f-714651275d8f",
+        "event": "activated",
+        "userId": "64a2d71d-8897-455a-9656-655c1c7a85f2"
+      },
+      {
+        "createdAt": "2026-02-13T10:26:36.598Z",
+        "id": 23,
+        "workflowId": "xGoI8eWhSA2HVS6R",
+        "versionId": "ab515eb2-5643-4fbc-866f-714651275d8f",
+        "event": "activated",
+        "userId": "64a2d71d-8897-455a-9656-655c1c7a85f2"
+      }
+    ]
+  }
+}
