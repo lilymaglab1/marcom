@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/layout/Layout';
+import { saveCreativeResult, getCreativeHistory, deleteCreativeGeneration, getActivePersona, PersonaSettings } from '../lib/supabaseClient';
 import {
     Sparkles,
     RefreshCw,
@@ -12,7 +13,9 @@ import {
     Check,
     ImageOff,
     Pencil,
-    Languages
+    Languages,
+    Download,
+    Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LILYMAG_BRAIN_CONTEXT } from '../data/aiBrainContext';
@@ -49,6 +52,33 @@ const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNa
     const [customPrompts, setCustomPrompts] = useState<Record<number, string>>({});
     const [isRegeneratingImage, setIsRegeneratingImage] = useState<Record<number, boolean>>({});
     const [imageLoadErrors, setImageLoadErrors] = useState<Record<number, boolean>>({});
+
+    // Persona State
+    const [persona, setPersona] = useState<PersonaSettings | null>(null);
+
+    // History State
+    const [history, setHistory] = useState<any[]>([]);
+
+    useEffect(() => {
+        fetchHistory();
+        loadPersona();
+    }, []);
+
+    async function loadPersona() {
+        const p = await getActivePersona();
+        if (p) setPersona(p);
+    }
+
+    async function fetchHistory() {
+        const h = await getCreativeHistory();
+        if (h) setHistory(h);
+    }
+
+    const loadHistoryItem = (item: any) => {
+        setResult(item.result_json);
+        setTopic(item.keyword);
+        setSelectedAgent(item.agent_mode || 'blog');
+    };
 
     useEffect(() => {
         if (result?.blog) {
@@ -106,7 +136,7 @@ const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNa
             if (isDirectMode) {
                 // 🚀 APP DIRECT MODE (No Server Dependency)
                 console.log("⚡ Generating via App Engine...");
-                const directResult: GeminiContent = await generateContentDirect(topic); // Assuming import
+                const directResult: GeminiContent = await generateContentDirect(topic, persona);
                 finalData = directResult;
             } else {
                 // ☁️ RAILWAY SERVER MODE
@@ -133,6 +163,11 @@ const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNa
             }
 
             setResult(finalData);
+
+            // Save to History
+            await saveCreativeResult(topic, selectedAgent, finalData);
+            fetchHistory();
+
         } catch (e: any) {
             console.error(e);
             alert(`생성 중 오류가 발생했습니다: ${e.message}`);
@@ -180,6 +215,49 @@ const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNa
         finally { setIsPublishing(false); }
     };
 
+    // 🖼️ Image Download
+    const handleDownloadImage = async (imageUrl: string, fileName: string) => {
+        try {
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Download failed:', err);
+            // Fallback: open in new tab
+            window.open(imageUrl, '_blank');
+        }
+    };
+
+    const handleDownloadAllImages = async () => {
+        if (!result?.images) return;
+        for (let i = 0; i < result.images.length; i++) {
+            const img = result.images[i];
+            await handleDownloadImage(img.url, `lilymag-${topic.replace(/\s+/g, '_')}-${i + 1}.png`);
+            // Small delay between downloads
+            await new Promise(r => setTimeout(r, 500));
+        }
+    };
+
+    // 🗑️ Delete History Item
+    const handleDeleteHistory = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm('이 작업 기록을 삭제하시겠습니까?')) return;
+        const success = await deleteCreativeGeneration(id);
+        if (success) {
+            setHistory(prev => prev.filter(h => h.id !== id));
+            // If current result matches deleted item, clear it
+        } else {
+            alert('삭제에 실패했습니다.');
+        }
+    };
+
     return (
         <Layout onNavigate={onNavigate} currentPage="studio">
             <div className="p-10 flex flex-col gap-10 max-w-[1700px] mx-auto min-h-screen">
@@ -225,15 +303,56 @@ const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNa
                                 <textarea value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="예: 해바라기, 심리학, 컬러학, 여름 추억..." className="w-full bg-black/40 border border-white/10 rounded-2xl p-6 text-sm h-40 focus:border-momentum-blue outline-none transition-all placeholder:text-white/10 resize-none leading-relaxed" />
                             </div>
                             <button onClick={handleGenerate} disabled={isGenerating || !topic} className="w-full py-6 bg-gradient-to-r from-momentum-blue to-blue-600 rounded-2xl font-black uppercase tracking-[0.3em] text-sm shadow-2xl flex items-center justify-center gap-4 transition-all disabled:opacity-30">
-                                {isGenerating ? <><RefreshCw className="w-5 h-5 animate-spin" />LILYMAG 스토리 생성 중...</> : <><Wand2 className="w-5 h-5" />작품 생성 시작 ({isDirectMode ? 'App' : 'Server'})</>}
+                                {isGenerating ? <span className="flex items-center gap-2"><RefreshCw className="w-5 h-5 animate-spin" />LILYMAG 스토리 생성 중...</span> : <span className="flex items-center gap-2"><Wand2 className="w-5 h-5" />작품 생성 시작 ({isDirectMode ? 'App' : 'Server'})</span>}
                             </button>
+                        </div>
+
+                        {/* History Panel */}
+                        <div className="glass-card p-6 bg-white/5 border-white/5 flex flex-col gap-4">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-white/50">Recent History</h3>
+                            <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto custom-scrollbar">
+                                {history.map((h) => (
+                                    <div
+                                        key={h.id}
+                                        className="text-left p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all group relative cursor-pointer"
+                                        onClick={() => loadHistoryItem(h)}
+                                    >
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-xs font-bold text-white group-hover:text-momentum-blue transition-colors truncate pr-6">
+                                                {h.keyword}
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] text-white/30">
+                                                    {new Date(h.created_at).toLocaleDateString()}
+                                                </span>
+                                                <button
+                                                    onClick={(e) => handleDeleteHistory(h.id, e)}
+                                                    className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-all p-1 rounded-lg hover:bg-red-500/10"
+                                                    title="삭제"
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 text-[10px] text-white/40">
+                                            <span className="uppercase">{h.agent_mode}</span>
+                                            {h.result_json?.images && <span>· 이미지 {h.result_json.images.length}장</span>}
+                                        </div>
+                                    </div>
+                                ))}
+                                {history.length === 0 && (
+                                    <div className="text-center text-white/20 text-xs py-4">
+                                        기록이 없습니다.
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
                     <div className="col-span-8 flex flex-col gap-10">
-                        <AnimatePresence mode="wait">
+                        <div className="flex-1">
                             {result ? (
-                                <motion.div key="result" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-10">
+                                <div key="result" className="flex flex-col gap-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
                                     <div className="glass-card p-10 bg-white/[0.02] border-white/5">
                                         <div className="flex items-center justify-between border-b border-white/5 pb-8">
                                             <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5">
@@ -271,6 +390,13 @@ const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNa
                                     <div className="flex flex-col gap-6 p-10 glass-card bg-white/[0.01]">
                                         <div className="flex items-center justify-between">
                                             <h4 className="text-xl font-bold font-outfit">LILYMAG Visual Arts (Flux Mode)</h4>
+                                            <button
+                                                onClick={handleDownloadAllImages}
+                                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 hover:bg-momentum-blue text-white/50 hover:text-white text-[10px] font-bold uppercase tracking-widest transition-all border border-white/10 hover:border-momentum-blue"
+                                            >
+                                                <Download className="w-3.5 h-3.5" />
+                                                전체 다운로드
+                                            </button>
                                         </div>
 
                                         {/* Updated Image Grid with Visible Controls */}
@@ -284,6 +410,7 @@ const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNa
                                                             onError={() => handleImageError(img.id, customPrompts[img.id] || img.recommended_prompt, 123456)}
                                                             className={`w-full h-full object-cover transition-all duration-700 ${isRegeneratingImage[img.id] ? 'blur-xl scale-110 opacity-30' : 'group-hover:scale-105'} ${imageLoadErrors[img.id] ? 'opacity-50' : ''}`}
                                                             loading="lazy"
+                                                            crossOrigin="anonymous"
                                                         />
                                                         {isRegeneratingImage[img.id] && <div className="absolute inset-0 flex items-center justify-center"><RefreshCw className="w-8 h-8 text-white animate-spin" /></div>}
                                                         {imageLoadErrors[img.id] && !isRegeneratingImage[img.id] && (
@@ -292,6 +419,14 @@ const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNa
                                                                 <span className="text-[10px]">로드 실패</span>
                                                             </div>
                                                         )}
+                                                        {/* Download overlay button */}
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleDownloadImage(img.url, `lilymag-${topic.replace(/\s+/g, '_')}-${img.id}.png`); }}
+                                                            className="absolute top-3 right-3 p-2.5 rounded-xl bg-black/60 backdrop-blur-sm text-white/70 hover:text-white hover:bg-momentum-blue opacity-0 group-hover:opacity-100 transition-all shadow-lg"
+                                                            title="이미지 다운로드"
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                        </button>
                                                     </div>
 
                                                     {/* Prompt Editor */}
@@ -318,13 +453,13 @@ const CreativeStudio: React.FC<{ onNavigate: (page: string) => void }> = ({ onNa
                                             ))}
                                         </div>
                                     </div>
-                                </motion.div>
+                                </div>
                             ) : (
-                                <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex flex-col items-center justify-center glass-card border-dashed border-white/5 p-40 text-center rounded-[4rem]">
+                                <div key="empty" className="flex-1 flex flex-col items-center justify-center glass-card border-dashed border-white/5 p-40 text-center rounded-[4rem] animate-in fade-in zoom-in duration-500">
                                     <h3 className="text-4xl font-bold text-white/10 tracking-tight leading-snug">LILYMAG STORYTELLING<br />ARTIFICIAL INTELLIGENCE</h3>
-                                </motion.div>
+                                </div>
                             )}
-                        </AnimatePresence>
+                        </div>
                     </div>
                 </div>
             </div>

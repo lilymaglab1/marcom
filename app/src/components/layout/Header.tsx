@@ -1,16 +1,28 @@
 import React from 'react';
-import { Search, Bell, User } from 'lucide-react';
+import { Search, Bell, User, Menu } from 'lucide-react';
 
-const Header = () => {
+interface HeaderProps {
+    onToggleMenu?: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onToggleMenu }) => {
     return (
-        <header className="h-20 border-b border-momentum-border bg-momentum-deep/20 backdrop-blur-lg flex items-center justify-between px-10 sticky top-0 z-40">
-            <div className="flex items-center gap-4 bg-white/5 border border-white/10 px-4 py-2 rounded-xl w-96">
-                <Search className="w-4 h-4 text-white/40" />
-                <input
-                    type="text"
-                    placeholder="AI 에이전트, 캠페인 또는 지식 검색..."
-                    className="bg-transparent border-none outline-none text-xs text-white placeholder:text-white/20 w-full"
-                />
+        <header className="h-20 border-b border-momentum-border bg-momentum-deep/20 backdrop-blur-lg flex items-center justify-between px-4 md:px-10 sticky top-0 z-40">
+            <div className="flex items-center">
+                <button
+                    onClick={onToggleMenu}
+                    className="p-2 mr-4 lg:hidden text-white/50 hover:text-white transition-colors"
+                >
+                    <Menu className="w-6 h-6" />
+                </button>
+                <div className="flex items-center gap-4 bg-white/5 border border-white/10 px-4 py-2 rounded-xl w-60 md:w-96 hidden md:flex">
+                    <Search className="w-4 h-4 text-white/40" />
+                    <input
+                        type="text"
+                        placeholder="AI 에이전트, 캠페인 또는 지식 검색..."
+                        className="bg-transparent border-none outline-none text-xs text-white placeholder:text-white/20 w-full"
+                    />
+                </div>
             </div>
 
             <div className="flex items-center gap-6">

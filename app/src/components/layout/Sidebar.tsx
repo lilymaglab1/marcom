@@ -7,7 +7,9 @@ import {
     BarChart3,
     Settings,
     HelpCircle,
-    Sparkles
+    Sparkles,
+    X,
+    BookOpenCheck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -15,6 +17,7 @@ const menuItems = [
     { id: 'dashboard', label: '대시보드', icon: LayoutDashboard },
     { id: 'knowledge', label: '지식 허브', icon: Database },
     { id: 'studio', label: 'AI 스튜디오', icon: PenTool },
+    { id: 'persona', label: '작가 페르소나', icon: BookOpenCheck },
     { id: 'automation', label: '자동화 흐름', icon: Zap },
     { id: 'analytics', label: '성과 분석', icon: BarChart3 },
     { id: 'academy', label: '마케팅 비법서', icon: HelpCircle },
@@ -23,11 +26,20 @@ const menuItems = [
 interface SidebarProps {
     onNavigate: (page: string) => void;
     currentPage: string;
+    isOpen?: boolean;
+    onClose?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ onNavigate, currentPage }) => {
+const Sidebar: React.FC<SidebarProps> = ({ onNavigate, currentPage, isOpen = false, onClose }) => {
     return (
-        <aside className="fixed left-0 top-0 h-screen w-72 bg-[#050B18]/60 border-r border-white/5 backdrop-blur-3xl flex flex-col p-8 z-50">
+        <aside className={`fixed left-0 top-0 h-screen w-72 bg-[#050B18]/95 border-r border-white/5 backdrop-blur-3xl flex flex-col p-8 z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+            {/* Mobile Close Button */}
+            <button
+                onClick={onClose}
+                className="absolute top-4 right-4 p-2 text-white/50 hover:text-white lg:hidden"
+            >
+                <X className="w-5 h-5" />
+            </button>
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}

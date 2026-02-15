@@ -14,16 +14,26 @@ import {
     Cpu
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { LILYMAG_BRAIN_CONTEXT } from '../data/aiBrainContext';
 
-const stats = [
+import { LILYMAG_BRAIN_CONTEXT } from '../data/aiBrainContext';
+import { getDashboardStats, getActivityLogs } from '../lib/supabaseClient';
+
+const IconMap: Record<string, any> = {
+    'TrendingUp': TrendingUp,
+    'Layers': Layers,
+    'Users': Users,
+    'Zap': Zap,
+    'Sparkles': Sparkles
+};
+
+const initialStats = [
     { label: '매출 성장률', value: '+24%', trend: '12%', isPositive: true, icon: TrendingUp, color: 'green' as const },
     { label: 'AI 생성 콘텐츠', value: '156개', trend: '8%', isPositive: true, icon: Layers, color: 'blue' as const },
     { label: '소셜 참여도', value: '5.2k', trend: '15%', isPositive: true, icon: Users, color: 'purple' as const },
     { label: '활성 워크플로우', value: '12개', trend: '2%', isPositive: false, icon: Zap, color: 'gold' as const },
 ];
 
-const activity = [
+const initialActivity = [
     { agent: '블로그 에디터', action: '새로운 전문가 칼럼 발행: "플로럴 아트 30년의 기록"', time: '2시간 전', status: 'done' },
     { agent: '비디오 PD', action: '인스타그램 발렌타인 캠페인용 릴스 5개 생성 완료', time: '4시간 전', status: 'done' },
     { agent: '공간 분석 AI', action: '고객 공간 사진 12건 스타일링 분석 진행 중', time: '6시간 전', status: 'processing' },
@@ -34,6 +44,41 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+    const [stats, setStats] = React.useState(initialStats);
+    const [activity, setActivity] = React.useState(initialActivity);
+
+    React.useEffect(() => {
+        async function fetchData() {
+            try {
+                const fetchedStats = await getDashboardStats();
+                if (fetchedStats && fetchedStats.length > 0) {
+                    const mappedStats = fetchedStats.map((s: any) => ({
+                        label: s.label,
+                        value: s.value,
+                        trend: s.trend_value,
+                        isPositive: s.is_positive,
+                        icon: IconMap[s.icon_name] || Zap,
+                        color: s.color as any
+                    }));
+                    setStats(mappedStats);
+                }
+
+                const fetchedLogs = await getActivityLogs();
+                if (fetchedLogs && fetchedLogs.length > 0) {
+                    const mappedLogs = fetchedLogs.map((l: any) => ({
+                        agent: l.agent_name,
+                        action: l.action_text,
+                        time: new Date(l.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        status: l.status
+                    }));
+                    setActivity(mappedLogs);
+                }
+            } catch (error) {
+                console.error("Dashboard fetch error", error);
+            }
+        }
+        fetchData();
+    }, []);
     return (
         <Layout onNavigate={onNavigate} currentPage="dashboard">
             <div className="p-10 flex flex-col gap-10 max-w-[1600px] mx-auto">

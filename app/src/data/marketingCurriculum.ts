@@ -14,6 +14,13 @@ export interface CurriculumItem {
         keyPoints: { title: string; desc: string }[];
         godariNote: string;
     };
+    created_at?: string;
+    sourceType?: 'youtube' | 'web' | 'brain';
+    originalUrl?: string;
+    metadata?: {
+        thumbnail?: string;
+        siteName?: string;
+    };
 }
 
 export const MARKETING_CURRICULUM: CurriculumItem[] = [

@@ -5,6 +5,7 @@ import CreativeStudio from './pages/CreativeStudio';
 import Automation from './pages/Automation';
 import Analytics from './pages/Analytics';
 import MarketingAcademy from './pages/MarketingAcademy';
+import PersonaSettings from './pages/PersonaSettings';
 
 function App() {
     const [currentPage, setCurrentPage] = useState('dashboard');
@@ -23,6 +24,8 @@ function App() {
                 return <Analytics onNavigate={setCurrentPage} />;
             case 'academy':
                 return <MarketingAcademy onNavigate={setCurrentPage} />;
+            case 'persona':
+                return <PersonaSettings onNavigate={setCurrentPage} />;
             default:
                 return <Dashboard onNavigate={setCurrentPage} />;
         }
